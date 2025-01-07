@@ -1,2 +1,2 @@
 # paraphrase-categorization
-Working on a master thesis which includes automatic categorization of paraphrases with two large language models. 
+Working on a master thesis titled Automatic Categorization of Paraphrases with Large Language Models. This includes loading of paraphrase datasets, which are publicly available on the web, machine translation with a private model specialized for slovene language, and LLM training for categorization with later fine-tuning. Training is done on two large language models, LlaMa and GaMS, first of them is public and second one is privat. 
