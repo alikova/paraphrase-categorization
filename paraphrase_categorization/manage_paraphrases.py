@@ -38,8 +38,8 @@ def add_example(file_path, schema_path, category_name, subcategory_name, new_exa
         print(f"Schema validation error after update: {e.message}")
 
 # Example usage
-file_path = 'paraphrase_data.json'
-schema_path = 'paraphrase_schema.json'
+file_path = 'Github/paraphrase_categorization/paraphrase_categories.json'
+schema_path = 'Github/paraphrase_categorization/paraphrase_schema.json'
 new_example = {
     "id": 2,
     "izvirnik": "Nov primer izvirnika.",

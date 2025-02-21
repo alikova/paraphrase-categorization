@@ -1,0 +1,44 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Kategorizacija parafraz",
+    "type": "object",
+    "properties": {
+      "kategorije": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "ime": {"type": "string"},
+            "opis": {"type": "string"},
+            "podkategorije": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "ime": {"type": "string"},
+                  "opis": {"type": "string"},
+                  "primer": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {"type": "integer"},
+                        "izvirnik": {"type": "string"},
+                        "parafraza": {"type": "string"},
+                        "prompt": {"type": "string"}
+                      },
+                      "required": ["id", "izvirnik", "parafraza"]
+                    }
+                  }
+                },
+                "required": ["ime", "opis", "primer"]
+              }
+            }
+          },
+          "required": ["ime", "opis", "podkategorije"]
+        }
+      }
+    },
+    "required": ["kategorije"]
+  }
+  

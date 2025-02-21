@@ -1,0 +1,26 @@
+{
+    "kategorije": [
+      {
+        "ime": "Leksikalno parafraziranje",
+        "opis": "Spreminjanje besed medtem ko ohranja isti pomen.",
+        "podkategorije": [
+          {
+            "ime": "Zamenjava sopomenk",
+            "opis": "Uporaba sopomenk za zamenjavo besed v izvirnem besedilu.",
+            "primer": [
+              {
+                "id": 1,
+                "izvirnik": "predložite naslednje informacije.",
+                "parafraza": "vnesite naslednje podatke.",
+                "prompt": "Naredi leksikalno parafrazo naslednjega stavka z uporabo zamenjave sopomenk: 'predložite naslednje informacije.'"
+              }
+              // Additional cases...
+            ]
+          }
+          // Additional subcategories...
+        ]
+      }
+      // Additional categories...
+    ]
+  }
+  
