@@ -4,11 +4,19 @@ from jsonschema import validate, ValidationError
 def add_example(file_path, schema_path, category_name, subcategory_name, new_example):
     # Load existing data
     with open(file_path, 'r', encoding='utf-8') as file:
-        data = json.load(file)
+        try:
+            data = json.load(file)
+        except json.JSONDecodeError as e:
+            print(f"JSONDecodeError: {e.msg} at line {e.lineno} column {e.colno}")
+            return
 
     # Load JSON schema
     with open(schema_path, 'r', encoding='utf-8') as schema_file:
-        schema = json.load(schema_file)
+        try:
+            schema = json.load(schema_file)
+        except json.JSONDecodeError as e:
+            print(f"JSONDecodeError: {e.msg} at line {e.lineno} column {e.colno}")
+            return
 
     # Validate existing data against the schema
     try:
@@ -23,7 +31,7 @@ def add_example(file_path, schema_path, category_name, subcategory_name, new_exa
             for subcategory in category['podkategorije']:
                 if subcategory['ime'] == subcategory_name:
                     # Append the new example
-                    subcategory['primera'].append(new_example)
+                    subcategory['primer'].append(new_example)
                     break
             break
 

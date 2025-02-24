@@ -1,26 +1,436 @@
 {
-    "kategorije": [
-      {
-        "ime": "Leksikalno parafraziranje",
-        "opis": "Spreminjanje besed medtem ko ohranja isti pomen.",
-        "podkategorije": [
-          {
-            "ime": "Zamenjava sopomenk",
-            "opis": "Uporaba sopomenk za zamenjavo besed v izvirnem besedilu.",
-            "primer": [
-              {
-                "id": 1,
-                "izvirnik": "predložite naslednje informacije.",
-                "parafraza": "vnesite naslednje podatke.",
-                "prompt": "Naredi leksikalno parafrazo naslednjega stavka z uporabo zamenjave sopomenk: 'predložite naslednje informacije.'"
-              }
-              // Additional cases...
-            ]
-          }
-          // Additional subcategories...
-        ]
-      }
-      // Additional categories...
-    ]
-  }
-  
+  "kategorije": [
+    {
+      "ime": "Leksikalno parafraziranje",
+      "opis": "Spreminjanje besed medtem ko ohranja isti pomen.",
+      "podkategorije": [
+        {
+          "ime": "Zamenjava sopomenk",
+          "opis": "Uporaba sopomenk za zamenjavo besed v izvirnem besedilu.",
+          "primer": [
+            {
+              "id": 1,
+              "zbirka": "Microsoft Reserach Paraphrase Corpus",
+              "izvirnik": "",
+              "parafraza": "",
+              "prompt": ""
+            }
+          ]
+        },
+        {
+          "ime": "Atonim z negacijo",
+          "opis": "Uporaba antonimov in negacije za ohranjanje izvirnega pomena (npr. spreminjanje “srečen” v “ne nesrečen”).",
+          "primer": [
+            {
+              "id": 1,
+              "zbirka": "Microsoft Reserach Paraphrase Corpus",
+              "izvirnik": "",
+              "parafraza": "",
+              "prompt": ""
+            }
+          ]
+        },
+        {
+          "ime": "Nominalizacija",
+          "opis": "Dejanja in lastnosti se pretvorijo v imenovalne izraze (npr. 'teči' postane 'tek'). ",
+          "primer": [
+            {
+              "id": 1,
+              "zbirka": "Microsoft Reserach Paraphrase Corpus",
+              "izvirnik": "",
+              "parafraza": "",
+              "prompt": ""
+            }
+          ]
+        },
+        {
+          "ime": "Reifikacija",
+          "opis": "Abstraktni pojmi se obravnavajo kot konkretne entitete (npr. 'pogum' kot nekaj, kar imaš ali si).",
+          "primer": [
+            {
+              "id": 1,
+              "zbirka": "Microsoft Reserach Paraphrase Corpus",
+              "izvirnik": "",
+              "parafraza": "",
+              "prompt": ""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ime": "Sintaktično parafraziranje",
+      "opis": "Spreminjanje strukture stavka.",
+      "podkategorije": [
+        {
+          "ime": "Glagolski vid",
+          "opis": "Pretvorba iz pasivnega v aktivni glas ali obratno. ",
+          "primer": [
+            {
+              "id": 1,
+              "zbirka": "Microsoft Reserach Paraphrase Corpus",
+              "izvirnik": "",
+              "parafraza": "",
+              "prompt": ""
+            }
+          ]
+        },
+        {
+          "ime": "Sprememba strukture stavka",
+          "opis": "Preureditev strukture stavka (npr. od kompleksnih do preprostih stavkov ali sprememba vrstnega reda povedi).",
+          "primer": [
+            {
+              "id": 1,
+              "zbirka": "Microsoft Reserach Paraphrase Corpus",
+              "izvirnik": "",
+              "parafraza": "",
+              "prompt": ""
+            }
+          ]
+        },
+        {
+          "ime": "Variabilnost",
+          "opis": "Prilagajanje jezikovnih struktur z uporabo splošnih spremenljivk namesto konkretnih entitet. (Originalna trditev: 'Socrates je človek.'/ Parafrazirana trditev z variabilnostjo: 'X je človek'. Tukaj je konkretna entiteta 'Socrates' nadomeščena s spremenljivko 'X', kar omogoča splošnejšo obliko trditve.) ",
+          "primer": [
+            {
+              "id": 1,
+              "zbirka": "Microsoft Reserach Paraphrase Corpus",
+              "izvirnik": "",
+              "parafraza": "",
+              "prompt": ""
+            }
+          ]
+        },
+        {
+          "ime": "Kvantifikacija",
+          "opis": "Namesto navajanja specifičnih primerov se uporabljajo splošni kvantifikatorji, kar omogoča bolj abstraktno in splošno razumevanje trditev.",
+          "primer": [
+            {
+              "id": 1,
+              "zbirka": "Microsoft Reserach Paraphrase Corpus",
+              "izvirnik": "",
+              "parafraza": "",
+              "prompt": ""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ime": "Semantično parafraziranje",
+      "opis": "Spreminjanje predstavitve ideje.",
+      "podkategorije": [
+        {
+          "ime": "Splošna formulacija",
+          "opis": "Uporaba bolj splošnih izrazov za prenos iste ideje. ",
+          "primer": [
+            {
+              "id": 1,
+              "zbirka": "Microsoft Reserach Paraphrase Corpus",
+              "izvirnik": "",
+              "parafraza": "",
+              "prompt": ""
+            }
+          ]
+        },
+        {
+          "ime": "Specifikacija",
+          "opis": "Uporaba bolj specifičnih izrazov za ožanje ideje.",
+          "primer": [
+            {
+              "id": 1,
+              "zbirka": "Microsoft Reserach Paraphrase Corpus",
+              "izvirnik": "",
+              "parafraza": "",
+              "prompt": ""
+            }
+          ]
+        },
+        {
+          "ime": "Sprememba modalnosti",
+          "opis": "Sprememba stopnje gotovosti ali resničnosti izjave (npr. spreminjanje 'lahko' v 'morda'.",
+          "primer": [
+            {
+              "id": 1,
+              "zbirka": "Microsoft Reserach Paraphrase Corpus",
+              "izvirnik": "",
+              "parafraza": "",
+              "prompt": ""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ime": "Pragmatično parafraziranje",
+      "opis": "Spreminjanje besedila na podlagi konteksta ali namena.",
+      "podkategorije": [
+        {
+          "ime": "Prilagajanje tona",
+          "opis": "Sprememba tona, da se prilagodi drugačni publiki ali kontekstu.",
+          "primer": [
+            {
+              "id": 1,
+              "zbirka": "Microsoft Reserach Paraphrase Corpus",
+              "izvirnik": "",
+              "parafraza": "",
+              "prompt": ""
+            }
+          ]
+        },
+        {
+          "ime": "Prilagajanje ravni podrobnosti",
+          "opis": "Povečanje ali zmanjšanje količine podrobnosti, da ustreza namenu ali potrebam ciljne publike.",
+          "primer": [
+            {
+              "id": 1,
+              "zbirka": "Microsoft Reserach Paraphrase Corpus",
+              "izvirnik": "",
+              "parafraza": "",
+              "prompt": ""
+            }
+          ]
+        },
+        {
+          "ime": "Namenoma izpuščanje",
+          "opis": "Izpuščanje delov izvirnega besedila, ki niso pomembni za nov kontekst ali namen.",
+          "primer": [
+            {
+              "id": 1,
+              "zbirka": "Microsoft Reserach Paraphrase Corpus",
+              "izvirnik": "",
+              "parafraza": "",
+              "prompt": ""
+            }
+          ]
+        },
+        {
+          "ime": "Reformulacija fizioloških dogodkov",
+          "opis": "Vključuje preoblikovanje predstavitev fizioloških dogodkov (npr. simptomov) v 'laične' izraze, ki jih kognitivni agent lahko razume in si jih zapomni.",
+          "primer": [
+            {
+              "id": 1,
+              "zbirka": "Microsoft Reserach Paraphrase Corpus",
+              "izvirnik": "",
+              "parafraza": "",
+              "prompt": ""
+            }
+          ]
+        },
+        {
+          "ime": "Reprezentacija pomena verbalnih sporočil",
+          "opis": "Vključuje predstavitev pomena verbalnih sporočil na način, ki je združljiv s tem, kako so povezane vsebine shranjene v spominu agenta. To pomeni, da morajo agenti sposobnost prepoznati in preoblikovati verbalna sporočila v oblike, ki so skladne z njihovimi obstoječimi ontologijami in podatkovnimi bazami. ",
+          "primer": [
+            {
+              "id": 1,
+              "zbirka": "Microsoft Reserach Paraphrase Corpus",
+              "izvirnik": "",
+              "parafraza": "",
+              "prompt": ""
+            }
+          ]
+        },
+        {
+          "ime": "Redukcija ontoloških zavez",
+          "opis": "(prepleta se s semantičnim/splošnostjo formulacije).",
+          "primer": [
+            {
+              "id": 1,
+              "zbirka": "Microsoft Reserach Paraphrase Corpus",
+              "izvirnik": "",
+              "parafraza": "",
+              "prompt": ""
+            }
+          ]
+        },
+        {
+          "ime": "Konsistenca",
+          "opis": "Parafraze so skladne z obstoječim sistemom prepričanj ali z znanimi dejstvi v določenem kontekstu.",
+          "primer": [
+            {
+              "id": 1,
+              "zbirka": "Microsoft Reserach Paraphrase Corpus",
+              "izvirnik": "",
+              "parafraza": "",
+              "prompt": ""
+            }
+          ]
+        },
+        {
+          "ime": "Robustnost",
+          "opis": "Parafraze ohranjajo pojasnjevalno moč in pomen izvornih trditev, tudi če so preoblikovane. Robustne parafraze so tiste, ki lahko še vedno pojasnijo izvorne trditve in ohranijo ključne informacije, ne glede na spremembe v formulaciji ali strukturi.",
+          "primer": [
+            {
+              "id": 1,
+              "zbirka": "Microsoft Reserach Paraphrase Corpus",
+              "izvirnik": "",
+              "parafraza": "",
+              "prompt": ""
+            }
+          ]
+        },
+        {
+          "ime": "Formalne parafraze",
+          "opis": "Parafraze, ki se razlikujejo v stopnji formalnosti ali slogu, vendar ohranjajo isti pomen. Na primer, 'Veselim se srečanja z vami' in 'Komaj čakam, da vas vidim'.",
+          "primer": [
+            {
+              "id": 1,
+              "zbirka": "Microsoft Reserach Paraphrase Corpus",
+              "izvirnik": "",
+              "parafraza": "",
+              "prompt": ""
+            }
+          ]
+        },
+        {
+          "ime": "Neformalne parafraze",
+          "opis": "Parafraze, ki so manj formalne ali vsakdanje, vendar ohranjajo isti pomen. Na primer, 'Ful se veselim, da vas vidim'.",
+          "primer": [
+            {
+              "id": 1,
+              "zbirka": "Microsoft Reserach Paraphrase Corpus",
+              "izvirnik": "",
+              "parafraza": "",
+              "prompt": ""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ime": "Parafraziranje na ravni diskurza",
+      "opis": "Spreminjanje večjih enot besedila, onkraj posameznih stavkov.",
+      "podkategorije": [
+        {
+          "ime": "Sprememba pripovedne perspektive",
+          "opis": "Sprememba pripovedne perspektive v zgodbi ali opisu (npr. iz prve osebe v tretjo osebo).",
+          "primer": [
+            {
+              "id": 1,
+              "zbirka": "Microsoft Reserach Paraphrase Corpus",
+              "izvirnik": "",
+              "parafraza": "",
+              "prompt": ""
+            }
+          ]
+        },
+        {
+          "ime": "Prilagoditev kohezije in koherence",
+          "opis": "Preurejanje ali preoblikovanje za izboljšanje povezovanja idej ali odstavkov.",
+          "primer": [
+            {
+              "id": 1,
+              "zbirka": "Microsoft Reserach Paraphrase Corpus",
+              "izvirnik": "",
+              "parafraza": "",
+              "prompt": ""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ime": "Parafraziranje z mešanimi načini",
+      "opis": "Kombiniranje več tehnik.",
+      "podkategorije": [
+        {
+          "ime": "Leksikalno-sintaktične spremembe",
+          "opis": "Združevanje leksikalnih in sintaktičnih sprememb za ustvarjanje parafraze.",
+          "primer": [
+            {
+              "id": 1,
+              "zbirka": "Microsoft Reserach Paraphrase Corpus",
+              "izvirnik": "",
+              "parafraza": "",
+              "prompt": ""
+            }
+          ]
+        },
+        {
+          "ime": "Sintaktično-semantične spremembe",
+          "opis": "Kombiniranje sprememb v sintaktični strukturi z semantičnimi prilagoditvami za prenos istega pomena v precej drugačni obliki.",
+          "primer": [
+            {
+              "id": 1,
+              "zbirka": "Microsoft Reserach Paraphrase Corpus",
+              "izvirnik": "",
+              "parafraza": "",
+              "prompt": ""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ime": "Kolokacijsko parafraziranje",
+      "opis": "",
+      "podkategorije": [
+        {
+          "ime": "Sintaktična analiza",
+          "opis": "Sintaktična analiza se osredotoča na strukturo stavka, kot so odnosi med besedami in njihova vloga v stavku. Uporabljajo se različne tehnike, kot so drevesne strukture stavkov, ki prikazujejo hierarhične odnose med besedami. ",
+          "primer": [
+            {
+              "id": 1,
+              "zbirka": "Microsoft Reserach Paraphrase Corpus",
+              "izvirnik": "",
+              "parafraza": "",
+              "prompt": ""
+            }
+          ]
+        },
+        {
+          "ime": "Semantična analiza",
+          "opis": "Semantična analiza se osredotoča na pomen stavkov in besed v njih. Uporabljajo se metode za razumevanje semantičnih relacij med besedami in njihovo interpretacijo v kontekstu stavka. ",
+          "primer": [
+            {
+              "id": 1,
+              "zbirka": "Microsoft Reserach Paraphrase Corpus",
+              "izvirnik": "",
+              "parafraza": "",
+              "prompt": ""
+            }
+          ]
+        },
+        {
+          "ime": "Analiza besedilne strukture",
+          "opis": "Ta analiza se osredotoča na organizacijo besedil in njihovega pomenskega toka. Vključuje prepoznavanje začetnih stavkov, zaključkov, pomenskih enot itd. ",
+          "primer": [
+            {
+              "id": 1,
+              "zbirka": "Microsoft Reserach Paraphrase Corpus",
+              "izvirnik": "",
+              "parafraza": "",
+              "prompt": ""
+            }
+          ]
+        },
+        {
+          "ime": "Leksikalne analize",
+          "opis": "Ta analiza uporablja leksikalne vire, kot so slovarji in semantične baze podatkov, za prepoznavanje povezav med besedami. Na primer, besede, ki so pogosto povezane v teh virih, se lahko obravnavajo kot kolokacije. ",
+          "primer": [
+            {
+              "id": 1,
+              "zbirka": "Microsoft Reserach Paraphrase Corpus",
+              "izvirnik": "",
+              "parafraza": "",
+              "prompt": ""
+            }
+          ]
+        },
+        {
+          "ime": "Kontekstualne analize",
+          "opis": "Upoštevajo se kontekstualni dejavniki, kot je sosedstvo besed v stavku ali besedilu, pri identifikaciji kolokacij. Na primer, besedne pare, ki se pogosto pojavljajo v bližini drug drugega v besedilu, se lahko obravnavajo kot kolokacije. ",
+          "primer": [
+            {
+              "id": 1,
+              "zbirka": "Microsoft Reserach Paraphrase Corpus",
+              "izvirnik": "",
+              "parafraza": "",
+              "prompt": ""
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

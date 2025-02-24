@@ -23,6 +23,7 @@
                       "type": "object",
                       "properties": {
                         "id": {"type": "integer"},
+                        "zbirka": {"type": "string"},
                         "izvirnik": {"type": "string"},
                         "parafraza": {"type": "string"},
                         "prompt": {"type": "string"}
