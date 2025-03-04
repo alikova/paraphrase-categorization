@@ -1,0 +1,21 @@
+import pandas as pd
+
+# Load the Excel file
+file_path = '/Users/alenka/Desktop/study/Programiranje/datoteke/Ontologija parafraz_mag delo/Github/paraphrase_categorization/predprocesiranje_msr.xlsx'  # Replace with your file path
+df = pd.read_excel(file_path)
+
+# Separate the odd and even rows
+odd_rows = df.iloc[::2].reset_index(drop=True)
+even_rows = df.iloc[1::2].reset_index(drop=True)
+
+# Create a new DataFrame with the desired structure
+new_df = pd.DataFrame({
+    'Column A': odd_rows.iloc[:, 0],
+    'Column B': even_rows.iloc[:, 0]
+})
+
+# Save the new DataFrame to an Excel file
+output_path = 'predprocesiranje_msr_paired.xlsx'  # Replace with your desired output path
+new_df.to_excel(output_path, index=False)
+
+print(f"Data has been organized and saved to {output_path}")
