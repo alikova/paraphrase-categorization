@@ -57,42 +57,56 @@ compare_sentences_in_excel(input_file_path, output_file_path)
 
 # Usage of METEOR
 import pandas as pd
-import nltk
-nltk.download('punkt')
+import spacy
 from nltk.translate.meteor_score import meteor_score
-from nltk.tokenize import word_tokenize
+
+# Naložite slovenski model
+nlp = spacy.load("sl_core_news_sm")
 
 def preprocess_and_evaluate(input_file_path, output_file_path):
-    # Load the Excel file into a DataFrame
+    # Naložite Excel datoteko v DataFrame
     df = pd.read_excel(input_file_path)
 
-    # Print column names to verify their existence
-    print("Columns in the DataFrame:", df.columns)
+    # Izpišite imena stolpcev za preverjanje
+    print("Stolpci v DataFrame:", df.columns)
 
-    # Ensure the correct column names are used
-    original_column = 'original'  # Updated column name
-    paraphrase_column = 'parafraza'  # Updated column name
+    # Zagotovite pravilna imena stolpcev
+    original_column = 'original'
+    paraphrase_column = 'parafraza'
 
-    # Function to compute METEOR score
+    # Funkcija za tokenizacijo s SpaCy
+    def tokenize_slovenian(text):
+        doc = nlp(str(text))
+        return [token.text for token in doc]
+
+    # Funkcija za izračun METEOR ocene
     def compute_meteor(row):
-        original = row[original_column]
-        paraphrase = row[paraphrase_column]
+        try:
+            original = str(row[original_column])
+            paraphrase = str(row[paraphrase_column])
+            
+            # Tokenizacija z uporabo SpaCy za slovenščino
+            tokenized_original = tokenize_slovenian(original)
+            tokenized_paraphrase = tokenize_slovenian(paraphrase)
+            
+            return meteor_score([tokenized_original], tokenized_paraphrase)
+        except Exception as e:
+            print(f"Napaka pri obdelavi vrstice: {row}")
+            print(f"Podrobnosti napake: {e}")
+            return None
 
-        # Tokenize the sentences
-        tokenized_original = word_tokenize(original)
-        tokenized_paraphrase = word_tokenize(paraphrase)
-
-        return meteor_score([tokenized_original], tokenized_paraphrase)
-
-    # Apply the METEOR function to each row and store the score in a new column
+    # Uporabite funkcijo za vsako vrstico in shranite oceno v nov stolpec
     df['METEOR_Score'] = df.apply(compute_meteor, axis=1)
+    
+    # Odstranite vrstice z vrednostmi None, če je potrebno
+    df = df.dropna(subset=['METEOR_Score'])
 
-    # Save the updated DataFrame to a new Excel file
+    # Shranite posodobljen DataFrame v novo Excel datoteko
     df.to_excel(output_file_path, index=False, engine='openpyxl')
 
-    print(f"File with METEOR scores has been saved to {output_file_path}")
+    print(f"Datoteka z METEOR ocenami je bila shranjena na {output_file_path}")
 
-# Example usage
+# Primer uporabe
 input_file_path = '/Users/alenka/Desktop/study/Programiranje/datoteke/Ontologija parafraz_mag delo/Github/paraphrase_categorization/paws_nepodvojene_filtrirane_parafraze.xlsx'
 output_file_path = '/Users/alenka/Desktop/study/Programiranje/datoteke/Ontologija parafraz_mag delo/Github/paraphrase_categorization/paws_similarity.xlsx'
 preprocess_and_evaluate(input_file_path, output_file_path)
