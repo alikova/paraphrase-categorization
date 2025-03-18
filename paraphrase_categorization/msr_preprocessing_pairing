@@ -1,21 +1,66 @@
 import pandas as pd
+import os
+import argparse
 
-# Load the Excel file
-file_path = '/Users/alenka/Desktop/study/Programiranje/datoteke/Ontologija parafraz_mag delo/Github/paraphrase_categorization/predprocesiranje_msr.xlsx'  # Replace with your file path
-df = pd.read_excel(file_path)
+def preprocess_and_pair_sentences(input_file: str, output_file: str) -> None:
+    """
+    Read an Excel file containing sentences, pair consecutive rows,
+    and save the result to a new Excel file.
+    
+    Args:
+        input_file (str): Path to the input Excel file
+        output_file (str): Path to save the output Excel file
+    """
+    try:
+        # Get the current script directory
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        
+        # Navigate to the project root (assuming the script is in Github/paraphrase_categorization/)
+        project_root = os.path.dirname(os.path.dirname(os.path.dirname(current_dir)))
+        
+        # Define the base directory for datasets
+        base_dir = os.path.join(project_root, "preprocessed_datasets")
+        os.makedirs(base_dir, exist_ok=True)
+        
+        # Construct full paths
+        input_path = os.path.join(base_dir, input_file)
+        output_path = os.path.join(base_dir, output_file)
+        
+        # Read the Excel file
+        df = pd.read_excel(input_path)
+        
+        # Separate odd and even rows and reset their indices
+        odd_rows = df.iloc[::2].reset_index(drop=True)
+        even_rows = df.iloc[1::2].reset_index(drop=True)
+        
+        # Create paired DataFrame
+        paired_df = pd.DataFrame({
+            'Sentence 1': odd_rows.iloc[:, 0],
+            'Sentence 2': even_rows.iloc[:, 0]
+        })
+        
+        # Save to Excel
+        paired_df.to_excel(output_path, index=False)
+        print(f"Successfully paired sentences and saved to {output_path}")
+        print(f"Base directory: {base_dir}")
+        
+    except FileNotFoundError:
+        print(f"Error: Could not find the input file '{input_file}'")
+        print(f"Attempted to read from: {input_path}")
+        print(f"Please ensure your input file is in: {base_dir}")
+    except Exception as e:
+        print(f"An error occurred: {str(e)}")
 
-# Separate the odd and even rows
-odd_rows = df.iloc[::2].reset_index(drop=True)
-even_rows = df.iloc[1::2].reset_index(drop=True)
-
-# Create a new DataFrame with the desired structure
-new_df = pd.DataFrame({
-    'Column A': odd_rows.iloc[:, 0],
-    'Column B': even_rows.iloc[:, 0]
-})
-
-# Save the new DataFrame to an Excel file
-output_path = 'predprocesiranje_msr_paired.xlsx'  # Replace with your desired output path
-new_df.to_excel(output_path, index=False)
-
-print(f"Data has been organized and saved to {output_path}")
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Pair consecutive sentences from an Excel file.')
+    parser.add_argument('--input', '-i', 
+                      default="predprocesiranje_msr.xlsx",
+                      help='Input Excel file name (should be in preprocessed_datasets directory)')
+    parser.add_argument('--output', '-o',
+                      default="predprocesiranje_msr_paired.xlsx",
+                      help='Output Excel file name (will be saved in preprocessed_datasets directory)')
+    
+    args = parser.parse_args()
+    
+    # Process the files
+    preprocess_and_pair_sentences(args.input, args.output)

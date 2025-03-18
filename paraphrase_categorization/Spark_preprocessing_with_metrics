@@ -1,0 +1,1500 @@
+# Metadata cleaning for Slovenian text
+import re
+import pandas as pd
+import numpy as np
+from tqdm.auto import tqdm
+
+# Define paths
+base_dir = "/content/drive/MyDrive/Colab Notebooks/preprocessed_datasets"
+dataset = "predprocesiranje_msr_paired"  # Change to your dataset name
+input_file = f"{base_dir}/{dataset}.xlsx"
+output_file = f"{base_dir}/paraphrase_analysis_results_{dataset.split('_')[0]}.csv"
+
+# Define column names
+text_col1 = "sentence_translation"
+text_col2 = "paraphrase_translation"
+
+def clean_text_with_metadata_detection(text):
+    """Clean text by detecting and removing metadata."""
+    if not isinstance(text, str) or not text.strip():
+        return ""
+    
+    # Common metadata patterns
+    metadata_patterns = [
+        # URLs and domains
+        r'\s+(?:www|http)[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}.*$',
+        # Agency names and author patterns
+        r'\s+[A-Z]{2,}(?:\s+[A-Z]{2,})+.*$',
+        r'\s+[A-Z][a-z]+\s+[A-Z][a-z]+\s+(?:CNN|Reuters).*$',
+        # Date patterns
+        r'\s+\d{4}/\d{2}/\d{2}.*$',
+        r'\s+\d{1,2}\.\s+(?:januar|februar|marec|april|maj|junij|julij|avgust|september|oktober|november|december)\s+\d{4}.*$',
+        # Asterisk patterns
+        r'\s+\*+\s*.*$'
+    ]
+    
+    # Apply each pattern
+    cleaned_text = text
+    for pattern in metadata_patterns:
+        cleaned_text = re.sub(pattern, '', cleaned_text)
+    
+    # Final cleaning
+    cleaned_text = re.sub(r'\s+', ' ', cleaned_text).strip()
+    return cleaned_text
+
+# Load data
+print(f"Loading data from {input_file}")
+df = pd.read_excel(input_file)
+print(f"Loaded {len(df)} sentence pairs")
+
+# Create cleaned columns
+print("Cleaning metadata...")
+df[f"clean_{text_col1}"] = [clean_text_with_metadata_detection(text) 
+                           for text in tqdm(df[text_col1], desc="Cleaning source sentences")]
+df[f"clean_{text_col2}"] = [clean_text_with_metadata_detection(text) 
+                           for text in tqdm(df[text_col2], desc="Cleaning paraphrase sentences")]
+
+# Calculate average character reduction
+avg_reduction1 = df[text_col1].str.len().mean() - df[f"clean_{text_col1}"].str.len().mean()
+avg_reduction2 = df[text_col2].str.len().mean() - df[f"clean_{text_col2}"].str.len().mean()
+print(f"Average characters removed from {text_col1}: {avg_reduction1:.1f}")
+print(f"Average characters removed from {text_col2}: {avg_reduction2:.1f}")
+
+# Save cleaned data
+cleaned_file = input_file.replace('.xlsx', '_cleaned.csv')
+df.to_csv(cleaned_file, index=False)
+print(f"Saved cleaned data to {cleaned_file}")
+
+# Show examples
+print("\nExample sentences after cleaning:")
+for i in range(min(3, len(df))):
+    print(f"\nOriginal: {df[text_col1].iloc[i]}")
+    print(f"Cleaned:  {df[f'clean_{text_col1}'].iloc[i]}")
+
+# Define the column names to use for the pipeline
+clean_col1 = f"clean_{text_col1}"
+clean_col2 = f"clean_{text_col2}"
+
+"""
+Apache Spark Integration for Paraphrase Analysis Pipeline
+This module enhances the existing pipeline with distributed processing capabilities.
+"""
+
+import os
+import time
+import pandas as pd
+import numpy as np
+from pyspark.sql import SparkSession
+from pyspark.sql.types import *
+from pyspark.sql.functions import col, udf, pandas_udf, lit
+from pyspark import SparkFiles
+import torch
+from typing import Iterator, Tuple, List
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+
+# Visualization functions included directly in the main module
+def visualize_results(df, output_dir='.'):
+    """
+    Create visualizations for the paraphrase analysis results.
+    
+    Args:
+        df: Pandas DataFrame with paraphrase analysis results
+        output_dir: Directory to save the visualizations
+    """
+    # Create directory if it doesn't exist
+    os.makedirs(output_dir, exist_ok=True)
+    
+    # Create figure with subplots
+    metrics_to_plot = []
+    
+    # Check which metrics are available
+    for metric in ['labse_similarity', 'laser_similarity', 'meteor_score',
+                   'length_ratio', 'jaccard_similarity', 'ensemble_score']:
+        if metric in df.columns:
+            metrics_to_plot.append(metric)
+    
+    if not metrics_to_plot:
+        print("No metrics available for visualization")
+        return
+    
+    # Calculate subplot grid dimensions
+    n_metrics = len(metrics_to_plot)
+    n_cols = min(3, n_metrics)
+    n_rows = (n_metrics + n_cols - 1) // n_cols
+    
+    # Create figure
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(5*n_cols, 4*n_rows))
+    
+    # Handle case with single subplot
+    if n_metrics == 1:
+        axes = np.array([axes])
+    
+    # Flatten axes array for easy iteration
+    if n_metrics > 1:
+        axes = axes.flatten()
+    
+    # Create histograms
+    for i, metric in enumerate(metrics_to_plot):
+        sns.histplot(df[metric], kde=True, ax=axes[i])
+        axes[i].set_title(f'Distribution of {metric}')
+        axes[i].axvline(df[metric].mean(), color='r', linestyle='--')
+    
+    # Hide unused subplots
+    for i in range(n_metrics, len(axes)):
+        axes[i].set_visible(False)
+    
+    plt.tight_layout()
+    plt.savefig(os.path.join(output_dir, 'metric_distributions.png'))
+    plt.close()
+    
+    # Correlation matrix (if multiple metrics available)
+    if len(metrics_to_plot) > 1:
+        plt.figure(figsize=(10, 8))
+        correlation = df[metrics_to_plot].corr()
+        sns.heatmap(correlation, annot=True, cmap='coolwarm')
+        plt.title('Correlation Matrix of Metrics')
+        plt.tight_layout()
+        plt.savefig(os.path.join(output_dir, 'correlation_matrix.png'))
+        plt.close()
+    
+    # Create a scatter plot of two main metrics (if available)
+    main_metrics = []
+    for metric in ['labse_similarity', 'laser_similarity']:
+        if metric in metrics_to_plot:
+            main_metrics.append(metric)
+    
+    if len(main_metrics) >= 2:
+        plt.figure(figsize=(10, 8))
+        scatter = plt.scatter(
+            df[main_metrics[0]],
+            df[main_metrics[1]],
+            c=df['ensemble_score'] if 'ensemble_score' in df.columns else None,
+            cmap='viridis',
+            alpha=0.7
+        )
+        plt.colorbar(scatter, label='Ensemble Score')
+        plt.xlabel(main_metrics[0])
+        plt.ylabel(main_metrics[1])
+        plt.title(f'Scatter Plot of {main_metrics[0]} vs {main_metrics[1]}')
+        plt.tight_layout()
+        plt.savefig(os.path.join(output_dir, 'metrics_scatter.png'))
+        plt.close()
+    
+    print(f"Basic visualizations saved to {output_dir}")
+
+
+def visualize_grammatical_metrics(df, output_dir='.'):
+    """
+    Create visualizations specifically for grammatical metrics.
+    
+    Args:
+        df: Pandas DataFrame with grammatical metrics
+        output_dir: Directory to save the visualizations
+    """
+    # Create directory if it doesn't exist
+    os.makedirs(output_dir, exist_ok=True)
+    
+    # 1. METEOR before and after lemmatization comparison
+    if 'raw_meteor_score' in df.columns and 'lemma_meteor_score' in df.columns:
+        plt.figure(figsize=(10, 8))
+        plt.scatter(df['raw_meteor_score'], df['lemma_meteor_score'], alpha=0.5)
+        plt.plot([0, 1], [0, 1], 'r--')  # Diagonal line
+        plt.xlabel('Raw METEOR Score')
+        plt.ylabel('Lemmatized METEOR Score')
+        plt.title('METEOR Scores Before and After Lemmatization')
+        plt.grid(True, alpha=0.3)
+        plt.savefig(os.path.join(output_dir, 'meteor_comparison.png'))
+        plt.close()
+        
+        # Histogram of METEOR differences
+        if 'meteor_difference' in df.columns:
+            plt.figure(figsize=(10, 6))
+            sns.histplot(df['meteor_difference'], kde=True)
+            plt.axvline(x=0, color='r', linestyle='--')
+            plt.xlabel('METEOR Difference (Lemmatized - Raw)')
+            plt.ylabel('Count')
+            plt.title('Distribution of METEOR Differences')
+            plt.grid(True, alpha=0.3)
+            plt.savefig(os.path.join(output_dir, 'meteor_difference.png'))
+            plt.close()
+    
+    # 2. Morphological similarity distribution
+    if 'morph_similarity' in df.columns:
+        plt.figure(figsize=(10, 6))
+        sns.histplot(df['morph_similarity'], kde=True, bins=20)
+        plt.xlabel('Morphological Similarity')
+        plt.ylabel('Count')
+        plt.title('Distribution of Morphological Similarity')
+        plt.grid(True, alpha=0.3)
+        plt.savefig(os.path.join(output_dir, 'morph_similarity.png'))
+        plt.close()
+    
+    # 3. Grammar mismatch analysis
+    if 'grammar_mismatch' in df.columns and 'morph_grammar_mismatch' in df.columns:
+        # Count of grammar mismatch types
+        mismatch_counts = {
+            'Both': sum(df['grammar_mismatch'] & df['morph_grammar_mismatch']),
+            'METEOR Only': sum(df['grammar_mismatch'] & ~df['morph_grammar_mismatch']),
+            'Morphology Only': sum(~df['grammar_mismatch'] & df['morph_grammar_mismatch']),
+            'No Mismatch': sum(~df['grammar_mismatch'] & ~df['morph_grammar_mismatch'])
+        }
+        
+        plt.figure(figsize=(10, 6))
+        plt.bar(mismatch_counts.keys(), mismatch_counts.values())
+        plt.xlabel('Grammar Mismatch Type')
+        plt.ylabel('Count')
+        plt.title('Types of Grammar Mismatches Detected')
+        plt.savefig(os.path.join(output_dir, 'grammar_mismatch_types.png'))
+        plt.close()
+    
+    # 4. Near-duplicates vs. Grammar mismatches
+    if 'is_near_duplicate' in df.columns and 'potential_grammar_error' in df.columns:
+        # Count combinations
+        categories = {
+            'Near Duplicate & Grammar Error': sum(df['is_near_duplicate'] & df['potential_grammar_error']),
+            'Near Duplicate Only': sum(df['is_near_duplicate'] & ~df['potential_grammar_error']),
+            'Grammar Error Only': sum(~df['is_near_duplicate'] & df['potential_grammar_error']),
+            'Neither': sum(~df['is_near_duplicate'] & ~df['potential_grammar_error'])
+        }
+        
+        plt.figure(figsize=(10, 6))
+        plt.bar(categories.keys(), categories.values())
+        plt.xlabel('Category')
+        plt.ylabel('Count')
+        plt.title('Near Duplicates vs. Grammar Errors')
+        plt.xticks(rotation=45, ha='right')
+        plt.tight_layout()
+        plt.savefig(os.path.join(output_dir, 'duplicate_vs_grammar.png'))
+        plt.close()
+    
+    print(f"Grammar-specific visualizations saved to {output_dir}")
+
+
+def initialize_spark(app_name="ParaphraseAnalysis", master=None):
+    """Initialize a Spark session with appropriate configuration for NLP tasks."""
+    # If no master is specified, it will use the default (local or cluster if configured)
+    builder = SparkSession.builder.appName(app_name)
+    
+    if master:
+        builder = builder.master(master)
+    
+    # Add necessary configuration for handling NLP models and data
+    spark = (builder
+        .config("spark.driver.memory", "16g")  # Adjust based on your environment
+        .config("spark.executor.memory", "16g")
+        .config("spark.driver.maxResultSize", "8g")
+        .config("spark.python.worker.memory", "8g")
+        .config("spark.kryoserializer.buffer.max", "1g")
+        .config("spark.sql.execution.arrow.pyspark.enabled", "true")  # Enable Arrow for pandas operations
+        .config("spark.sql.execution.arrow.maxRecordsPerBatch", "10000")  # Control batch size
+        .config("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
+        .getOrCreate())
+    
+    # Broadcast the device information to all workers
+    def get_device_info():
+        if torch.cuda.is_available():
+            return {"name": "cuda", "device_name": torch.cuda.get_device_name(0)}
+        else:
+            return {"name": "cpu", "device_name": "CPU"}
+    
+    device_info = get_device_info()
+    device_broadcast = spark.sparkContext.broadcast(device_info)
+    
+    print(f"Initialized Spark with {device_info['name']} device: {device_info['device_name']}")
+    return spark, device_broadcast
+
+
+def shutdown_spark(spark):
+    """Properly shut down the Spark session."""
+    if spark:
+        spark.stop()
+        print("Spark session stopped")
+
+
+def distribute_model_files(spark, model_paths):
+    """Add model files to Spark for distribution to all workers."""
+    for path in model_paths:
+        if os.path.exists(path):
+            spark.sparkContext.addFile(path)
+            print(f"Added {path} to Spark distribution")
+        else:
+            print(f"Warning: Model file {path} not found")
+
+
+def preprocess_with_spark(spark, df, source_col1, source_col2):
+    """
+    Preprocess the input dataframe using Spark for parallel processing.
+    
+    Args:
+        spark: SparkSession instance
+        df: Pandas DataFrame with source columns
+        source_col1, source_col2: Names of the text columns to normalize
+        
+    Returns:
+        Pandas DataFrame with additional normalized columns
+    """
+    # Convert pandas DataFrame to Spark DataFrame
+    spark_df = spark.createDataFrame(df)
+    
+    # Define the normalization function
+    def normalize_text(text):
+        if not isinstance(text, str):
+            return ""
+        return text.lower().strip()
+    
+    # Register UDF
+    normalize_udf = udf(normalize_text, StringType())
+    
+    # Apply normalization
+    spark_df = spark_df.withColumn(f"norm_{source_col1}", normalize_udf(col(source_col1)))
+    spark_df = spark_df.withColumn(f"norm_{source_col2}", normalize_udf(col(source_col2)))
+    
+    # Convert back to pandas
+    result_df = spark_df.toPandas()
+    print(f"Preprocessed {len(result_df)} rows using Spark")
+    
+    return result_df
+
+
+def get_batch_embeddings(model_name, batch_texts, device):
+    """
+    Get embeddings for a batch of texts using the specified model.
+    This function is designed to run on a single Spark executor.
+    
+    Args:
+        model_name: Name of the embedding model to use ('labse' or 'sentence-transformer')
+        batch_texts: List of text strings
+        device: Device to run the model on (cuda/cpu)
+        
+    Returns:
+        numpy array of embeddings
+    """
+    import torch
+    import numpy as np
+    
+    if model_name == 'labse':
+        try:
+            from transformers import AutoTokenizer, AutoModel
+            
+            # Load models if not loaded already (will be cached for subsequent calls)
+            if not hasattr(get_batch_embeddings, 'labse_tokenizer'):
+                get_batch_embeddings.labse_tokenizer = AutoTokenizer.from_pretrained("setu4993/LaBSE")
+                get_batch_embeddings.labse_model = AutoModel.from_pretrained("setu4993/LaBSE").to(device)
+                print(f"LaBSE model loaded on device: {device}")
+            
+            # Tokenize
+            inputs = get_batch_embeddings.labse_tokenizer(
+                batch_texts, 
+                return_tensors="pt", 
+                padding=True, 
+                truncation=True, 
+                max_length=128
+            ).to(device)
+            
+            # Get embeddings
+            with torch.no_grad():
+                outputs = get_batch_embeddings.labse_model(**inputs)
+                embeddings = outputs.pooler_output
+                
+                # Normalize
+                embeddings = torch.nn.functional.normalize(embeddings, p=2, dim=1)
+                
+            return embeddings.cpu().numpy()
+            
+        except Exception as e:
+            print(f"Error in LaBSE embedding calculation: {e}")
+            # Return zero embeddings as fallback
+            return np.zeros((len(batch_texts), 768))
+            
+    elif model_name == 'sentence-transformer':
+        try:
+            from sentence_transformers import SentenceTransformer
+            
+            # Load model if not loaded already
+            if not hasattr(get_batch_embeddings, 'st_model'):
+                get_batch_embeddings.st_model = SentenceTransformer('paraphrase-multilingual-mpnet-base-v2')
+                if torch.cuda.is_available():
+                    get_batch_embeddings.st_model = get_batch_embeddings.st_model.to(device)
+                print(f"Sentence-Transformer model loaded on device: {device}")
+            
+            # Get embeddings
+            embeddings = get_batch_embeddings.st_model.encode(
+                batch_texts, 
+                convert_to_tensor=True,
+                show_progress_bar=False
+            )
+            
+            return embeddings.cpu().numpy()
+            
+        except Exception as e:
+            print(f"Error in Sentence-Transformer embedding calculation: {e}")
+            # Return zero embeddings as fallback
+            return np.zeros((len(batch_texts), 768))
+    
+    else:
+        print(f"Unknown model name: {model_name}")
+        return np.zeros((len(batch_texts), 768))
+
+
+def calculate_similarities(embeddings1, embeddings2):
+    """Calculate cosine similarities between two sets of embeddings."""
+    import numpy as np
+    
+    similarities = np.zeros(len(embeddings1))
+    for i in range(len(embeddings1)):
+        # Ensure embeddings are normalized
+        emb1 = embeddings1[i].reshape(1, -1)
+        emb2 = embeddings2[i].reshape(1, -1)
+        
+        # Calculate cosine similarity
+        similarities[i] = np.dot(emb1, emb2.T)[0][0] / (
+            np.linalg.norm(emb1) * np.linalg.norm(emb2) + 1e-8)
+    
+    return similarities
+
+
+def calculate_embedding_metrics_spark(spark, df, text_col1, text_col2, device_broadcast, batch_size=32):
+    """
+    Calculate embedding-based similarity metrics using Spark for distributed processing.
+    
+    Args:
+        spark: SparkSession instance
+        df: Pandas DataFrame with normalized text columns
+        text_col1, text_col2: Names of the text columns to compare
+        device_broadcast: Broadcast variable containing device information
+        batch_size: Size of batches to process
+        
+    Returns:
+        Pandas DataFrame with similarity metrics added
+    """
+    # Convert pandas DataFrame to Spark DataFrame
+    spark_df = spark.createDataFrame(df)
+    
+    # Use broadcast variables for efficiency
+    device_info = device_broadcast.value
+    device = device_info["name"]
+    
+    # Define processing function for batch-wise computation using a safer approach
+    @pandas_udf("double")
+    def calculate_labse_similarity(texts1_series, texts2_series):
+        # Process one row at a time (safer but less efficient)
+        texts1 = texts1_series.tolist()
+        texts2 = texts2_series.tolist()
+        results = []
+        
+        # Process in small, fixed-size batches
+        for i in range(0, len(texts1), batch_size):
+            batch_end = min(i + batch_size, len(texts1))
+            batch_texts1 = texts1[i:batch_end]
+            batch_texts2 = texts2[i:batch_end]
+            
+            try:
+                # Get embeddings
+                emb1 = get_batch_embeddings('labse', batch_texts1, device)
+                emb2 = get_batch_embeddings('labse', batch_texts2, device)
+                
+                # Calculate similarities
+                batch_similarities = calculate_similarities(emb1, emb2)
+                results.extend(batch_similarities)
+            except Exception as e:
+                print(f"Error in batch {i}-{batch_end}: {e}")
+                # Fallback for errors: neutral similarity
+                results.extend([0.5] * (batch_end - i))
+        
+        return pd.Series(results)
+    
+    @pandas_udf("double")
+    def calculate_st_similarity(texts1_series, texts2_series):
+        # Process one row at a time (safer but less efficient)
+        texts1 = texts1_series.tolist()
+        texts2 = texts2_series.tolist()
+        results = []
+        
+        # Process in small, fixed-size batches
+        for i in range(0, len(texts1), batch_size):
+            batch_end = min(i + batch_size, len(texts1))
+            batch_texts1 = texts1[i:batch_end]
+            batch_texts2 = texts2[i:batch_end]
+            
+            try:
+                # Get embeddings
+                emb1 = get_batch_embeddings('sentence-transformer', batch_texts1, device)
+                emb2 = get_batch_embeddings('sentence-transformer', batch_texts2, device)
+                
+                # Calculate similarities
+                batch_similarities = calculate_similarities(emb1, emb2)
+                results.extend(batch_similarities)
+            except Exception as e:
+                print(f"Error in batch {i}-{batch_end}: {e}")
+                # Fallback for errors: neutral similarity
+                results.extend([0.5] * (batch_end - i))
+        
+        return pd.Series(results)
+    
+    # Apply the functions
+    try:
+        print("Calculating LaBSE similarities...")
+        spark_df = spark_df.withColumn(
+            'labse_similarity', 
+            calculate_labse_similarity(col(text_col1), col(text_col2))
+        )
+    except Exception as e:
+        print(f"Error in LaBSE calculation: {e}")
+        # Add fallback column
+        spark_df = spark_df.withColumn('labse_similarity', lit(0.5))
+    
+    try:
+        print("Calculating Sentence-Transformer similarities...")
+        spark_df = spark_df.withColumn(
+            'laser_similarity',  # We keep the same name for compatibility
+            calculate_st_similarity(col(text_col1), col(text_col2))
+        )
+    except Exception as e:
+        print(f"Error in sentence-transformer calculation: {e}")
+        # Add fallback column
+        spark_df = spark_df.withColumn('laser_similarity', lit(0.5))
+    
+    # Convert back to pandas
+    result_df = spark_df.toPandas()
+    print(f"Calculated embedding metrics for {len(result_df)} rows using Spark")
+    
+    return result_df
+
+
+def jaccard_similarity_udf(s1, s2):
+    """Calculate Jaccard similarity between two strings."""
+    if not isinstance(s1, str):
+        s1 = ""
+    if not isinstance(s2, str):
+        s2 = ""
+    
+    words1 = set(s1.split())
+    words2 = set(s2.split())
+    
+    if not words1 and not words2:
+        return 1.0
+    
+    intersection = len(words1.intersection(words2))
+    union = len(words1.union(words2))
+    
+    return intersection / union if union > 0 else 0
+
+
+def calculate_linguistic_metrics_spark(spark, df, text_col1, text_col2):
+    """
+    Calculate linguistic metrics using Spark for distributed processing.
+    A simplified version focusing on metrics that can be reliably computed in Spark.
+    
+    Args:
+        spark: SparkSession instance
+        df: Pandas DataFrame with normalized text columns
+        text_col1, text_col2: Names of the text columns to compare
+        
+    Returns:
+        Pandas DataFrame with linguistic metrics added
+    """
+    # Convert pandas DataFrame to Spark DataFrame
+    spark_df = spark.createDataFrame(df)
+    
+    # Register UDFs
+    jaccard_udf = udf(jaccard_similarity_udf, DoubleType())
+    
+    # Calculate length ratio
+    @udf(DoubleType())
+    def length_ratio(text1, text2):
+        if not isinstance(text1, str):
+            text1 = ""
+        if not isinstance(text2, str):
+            text2 = ""
+        
+        len1 = len(text1.split())
+        len2 = len(text2.split())
+        
+        return min(len1, len2) / max(len1, len2) if max(len1, len2) > 0 else 0
+    
+    # Calculate metrics
+    print("Calculating linguistic metrics with Spark...")
+    spark_df = spark_df.withColumn(
+        'jaccard_similarity', 
+        jaccard_udf(col(text_col1), col(text_col2))
+    )
+    
+    spark_df = spark_df.withColumn(
+        'length_ratio',
+        length_ratio(col(text_col1), col(text_col2))
+    )
+    
+    # Add placeholder for METEOR score (simplified approximation)
+    # In a full implementation, this would use a more sophisticated NLP approach
+    spark_df = spark_df.withColumn(
+        'meteor_score',
+        col('jaccard_similarity') * 0.8  # Simple approximation
+    )
+    
+    # Convert back to pandas
+    result_df = spark_df.toPandas()
+    print(f"Calculated linguistic metrics for {len(result_df)} rows using Spark")
+    
+    return result_df
+
+
+def ensemble_scoring_spark(spark, df):
+    """
+    Apply ensemble scoring using Spark.
+    
+    Args:
+        spark: SparkSession instance
+        df: Pandas DataFrame with various similarity metrics
+        
+    Returns:
+        Pandas DataFrame with ensemble scores and classifications
+    """
+    # Convert pandas DataFrame to Spark DataFrame
+    spark_df = spark.createDataFrame(df)
+    
+    # Available metrics (check which columns exist)
+    available_metrics = []
+    weights = {}
+    
+    if 'labse_similarity' in df.columns:
+        available_metrics.append('labse_similarity')
+        weights['labse_similarity'] = 0.4
+    
+    if 'laser_similarity' in df.columns:
+        available_metrics.append('laser_similarity')
+        weights['laser_similarity'] = 0.3
+    
+    if 'meteor_score' in df.columns:
+        available_metrics.append('meteor_score')
+        weights['meteor_score'] = 0.1
+    
+    if 'length_ratio' in df.columns:
+        available_metrics.append('length_ratio')
+        weights['length_ratio'] = 0.1
+    
+    if 'jaccard_similarity' in df.columns:
+        available_metrics.append('jaccard_similarity')
+        weights['jaccard_similarity'] = 0.1
+    
+    # If no metrics available, add simple fallback
+    if not available_metrics:
+        print("No metrics available for ensemble scoring, using fallback")
+        spark_df = spark_df.withColumn('ensemble_score', lit(0.5))
+        spark_df = spark_df.withColumn('is_paraphrase', lit(False))
+        return spark_df.toPandas()
+    
+    # Normalize weights to sum to 1
+    total_weight = sum(weights.values())
+    normalized_weights = {k: v/total_weight for k, v in weights.items()}
+    
+    # Calculate weighted score
+    ensemble_expr = None
+    for metric in available_metrics:
+        weight = normalized_weights[metric]
+        if ensemble_expr is None:
+            ensemble_expr = col(metric) * weight
+        else:
+            ensemble_expr = ensemble_expr + (col(metric) * weight)
+    
+    spark_df = spark_df.withColumn('ensemble_score', ensemble_expr)
+    
+    # Classify pairs
+    spark_df = spark_df.withColumn('is_paraphrase', col('ensemble_score') > 0.75)
+    
+    print(f"Using {len(available_metrics)} metrics for ensemble scoring with weights: {normalized_weights}")
+    
+    # Convert back to pandas
+    result_df = spark_df.toPandas()
+    
+    return result_df
+
+
+def calculate_metrics_fallback(df, text_col1, text_col2, device):
+    """
+    Fallback method for calculating metrics when Spark processing fails.
+    This uses the original code's approach but with improved error handling.
+    
+    Args:
+        df: Pandas DataFrame with normalized text columns
+        text_col1, text_col2: Names of the text columns to compare
+        device: Torch device to use for calculations
+        
+    Returns:
+        Pandas DataFrame with metrics added
+    """
+    import torch
+    import numpy as np
+    from tqdm.auto import tqdm
+    import time
+    
+    print("Using fallback calculation method...")
+    results = df.copy()
+    
+    # Define safe batch size
+    batch_size = 8  # Smaller batch size for safety
+    
+    # Try to load models with multiple retries
+    max_retries = 3
+    
+    # LaBSE loading with retries
+    for attempt in range(max_retries):
+        try:
+            print(f"Loading LaBSE model (attempt {attempt+1}/{max_retries})...")
+            from transformers import AutoTokenizer, AutoModel
+            
+            tokenizer = AutoTokenizer.from_pretrained("setu4993/LaBSE")
+            model = AutoModel.from_pretrained("setu4993/LaBSE").to(device)
+            print("LaBSE model loaded successfully")
+            break
+        except Exception as e:
+            print(f"LaBSE loading attempt {attempt+1} failed: {e}")
+            if attempt == max_retries - 1:
+                print("Could not load LaBSE model, will use simpler metrics")
+                model = None
+                tokenizer = None
+            time.sleep(2)  # Wait before retrying
+    
+    # Sentence transformer loading with retries
+    for attempt in range(max_retries):
+        try:
+            print(f"Loading sentence-transformers model (attempt {attempt+1}/{max_retries})...")
+            from sentence_transformers import SentenceTransformer
+            st_model = SentenceTransformer('paraphrase-multilingual-mpnet-base-v2')
+            if torch.cuda.is_available():
+                st_model = st_model.to(device)
+            print("Sentence-Transformer model loaded successfully")
+            break
+        except Exception as e:
+            print(f"Sentence-Transformer loading attempt {attempt+1} failed: {e}")
+            if attempt == max_retries - 1:
+                print("Could not load Sentence-Transformer model, will use simpler metrics")
+                st_model = None
+            time.sleep(2)  # Wait before retrying
+    
+    # Prepare data
+    texts1 = df[text_col1].tolist()
+    texts2 = df[text_col2].tolist()
+    
+    # Initialize results containers
+    labse_scores = np.zeros(len(df))
+    st_scores = np.zeros(len(df))
+    
+    # LaBSE scoring function with better error handling
+    def get_labse_similarity_safe(batch_texts1, batch_texts2):
+        try:
+            if tokenizer is None or model is None:
+                return np.array([0.5] * len(batch_texts1))
+                
+            # Tokenize
+            inputs1 = tokenizer(batch_texts1, return_tensors="pt", padding=True, truncation=True, max_length=128).to(device)
+            inputs2 = tokenizer(batch_texts2, return_tensors="pt", padding=True, truncation=True, max_length=128).to(device)
+            
+            # Get embeddings
+            with torch.no_grad():
+                embeddings1 = model(**inputs1).pooler_output
+                embeddings2 = model(**inputs2).pooler_output
+                
+                # Normalize
+                embeddings1 = torch.nn.functional.normalize(embeddings1, p=2, dim=1)
+                embeddings2 = torch.nn.functional.normalize(embeddings2, p=2, dim=1)
+                
+                # Calculate cosine similarity
+                similarities = torch.bmm(
+                    embeddings1.unsqueeze(1),
+                    embeddings2.unsqueeze(2)
+                ).squeeze().cpu().numpy()
+            
+            return similarities
+        except Exception as e:
+            print(f"Error in LaBSE similarity calculation: {e}")
+            return np.array([0.5] * len(batch_texts1))  # Fallback to neutral score
+    
+    # Sentence-transformers scoring with better error handling
+    def get_st_similarity_safe(batch_texts1, batch_texts2):
+        try:
+            if st_model is None:
+                return np.array([0.5] * len(batch_texts1))
+                
+            # Get embeddings
+            with torch.no_grad():
+                embeddings1 = st_model.encode(batch_texts1, convert_to_tensor=True)
+                embeddings2 = st_model.encode(batch_texts2, convert_to_tensor=True)
+                
+                # Calculate cosine similarities
+                similarities = []
+                for i in range(len(batch_texts1)):
+                    try:
+                        emb1 = embeddings1[i].unsqueeze(0)
+                        emb2 = embeddings2[i].unsqueeze(0)
+                        sim = torch.nn.functional.cosine_similarity(emb1, emb2).item()
+                        similarities.append(sim)
+                    except Exception as e:
+                        print(f"Error calculating similarity for item {i}: {e}")
+                        similarities.append(0.5)  # Fallback
+            
+            return np.array(similarities)
+        except Exception as e:
+            print(f"Error in Sentence-Transformer similarity calculation: {e}")
+            return np.array([0.5] * len(batch_texts1))  # Fallback to neutral score
+    
+    # Jaccard similarity as a fallback
+    def jaccard_similarity(text1, text2):
+        if not isinstance(text1, str):
+            text1 = ""
+        if not isinstance(text2, str):
+            text2 = ""
+        
+        words1 = set(text1.lower().split())
+        words2 = set(text2.lower().split())
+        
+        if not words1 and not words2:
+            return 1.0
+        
+        intersection = len(words1.intersection(words2))
+        union = len(words1.union(words2))
+        
+        return intersection / union if union > 0 else 0
+    
+    # Length ratio
+    def calc_length_ratio(text1, text2):
+        if not isinstance(text1, str):
+            text1 = ""
+        if not isinstance(text2, str):
+            text2 = ""
+        
+        len1 = len(text1.split())
+        len2 = len(text2.split())
+        
+        return min(len1, len2) / max(len1, len2) if max(len1, len2) > 0 else 0
+    
+    # Process in batches with progress bar
+    for i in tqdm(range(0, len(df), batch_size), desc="Calculating metrics (fallback method)"):
+        end_idx = min(i + batch_size, len(df))
+        batch_texts1 = texts1[i:end_idx]
+        batch_texts2 = texts2[i:end_idx]
+        
+        # Calculate and store similarities
+        labse_scores[i:end_idx] = get_labse_similarity_safe(batch_texts1, batch_texts2)
+        st_scores[i:end_idx] = get_st_similarity_safe(batch_texts1, batch_texts2)
+    
+    # Add scores to dataframe
+    results['labse_similarity'] = labse_scores
+    results['laser_similarity'] = st_scores  # We use sentence-transformers instead of LASER
+    
+    # Calculate Jaccard similarity for each pair
+    print("Calculating Jaccard similarity...")
+    results['jaccard_similarity'] = [
+        jaccard_similarity(t1, t2) for t1, t2 in zip(texts1, texts2)
+    ]
+    
+    # Calculate length ratio
+    print("Calculating length ratio...")
+    results['length_ratio'] = [
+        calc_length_ratio(t1, t2) for t1, t2 in zip(texts1, texts2)
+    ]
+    
+    # Add placeholder for METEOR (approximated)
+    results['meteor_score'] = results['jaccard_similarity'] * 0.8
+    
+    return results
+
+
+def run_paraphrase_pipeline_spark(input_file, text_col1, text_col2, output_file, spark_master=None, clean_metadata=True):
+    """
+    Run the paraphrase analysis pipeline using Spark for distributed processing.
+    Falls back to non-Spark processing if Spark fails.
+    
+    Args:
+        input_file: Path to the input Excel file
+        text_col1, text_col2: Names of the text columns to compare
+        output_file: Path to save the output CSV
+        spark_master: Optional Spark master URL (e.g., 'local[*]', 'spark://host:port')
+        clean_metadata: Whether to perform metadata cleaning (default: True)
+        
+    Returns:
+        Pandas DataFrame with analysis results
+    """
+    start_time = time.time()
+    print(f"Starting Spark-powered paraphrase analysis pipeline at {time.strftime('%H:%M:%S')}")
+    
+    spark = None
+    
+    # Flag to track if we're using Spark or fallback
+    using_spark = True
+    device = None
+    
+    try:
+        # Initialize Spark
+        spark, device_broadcast = initialize_spark(
+            app_name="ParaphraseAnalysis", 
+            master=spark_master
+        )
+        
+        # Get device from broadcast
+        device_info = device_broadcast.value
+        device = torch.device(device_info["name"])
+        
+        # Load data
+        print(f"Loading data from {input_file}")
+        df = pd.read_excel(input_file)
+        print(f"Loaded {len(df)} sentence pairs")
+        
+        # Preprocessing with Spark
+        try:
+            print("Preprocessing data with Spark...")
+            df = preprocess_with_spark(spark, df, text_col1, text_col2)
+        except Exception as e:
+            print(f"Spark preprocessing failed: {e}")
+            print("Using fallback preprocessing method...")
+            
+            # Fallback to non-Spark preprocessing
+            def normalize_text(text):
+                if not isinstance(text, str):
+                    return ""
+                return text.lower().strip()
+            
+            df[f"norm_{text_col1}"] = df[text_col1].apply(normalize_text)
+            df[f"norm_{text_col2}"] = df[text_col2].apply(normalize_text)
+        
+        # Save intermediate preprocessing results
+        intermediate_file = output_file.replace('.csv', '_preprocessed.csv')
+        df.to_csv(intermediate_file, index=False)
+        print(f"Saved preprocessed data to {intermediate_file}")
+        
+        # Try Spark embedding metrics calculation
+        try:
+            print("Calculating embedding metrics with Spark...")
+            df = calculate_embedding_metrics_spark(
+                spark, 
+                df, 
+                f"norm_{text_col1}", 
+                f"norm_{text_col2}", 
+                device_broadcast
+            )
+        except Exception as e:
+            print(f"Spark embedding calculation failed: {e}")
+            using_spark = False
+            
+            # Fall back to non-Spark method
+            print("Falling back to non-Spark embedding calculation...")
+            df = calculate_metrics_fallback(
+                df,
+                f"norm_{text_col1}",
+                f"norm_{text_col2}",
+                device
+            )
+        
+        # Save embedding results
+        embedding_file = output_file.replace('.csv', '_embeddings.csv')
+        df.to_csv(embedding_file, index=False)
+        print(f"Saved embedding results to {embedding_file}")
+        
+        # Try Spark linguistic metrics calculation if we're still using Spark
+        if using_spark:
+            try:
+                print("Calculating linguistic metrics with Spark...")
+                df = calculate_linguistic_metrics_spark(
+                    spark, 
+                    df, 
+                    f"norm_{text_col1}", 
+                    f"norm_{text_col2}"
+                )
+            except Exception as e:
+                print(f"Spark linguistic metrics calculation failed: {e}")
+                # We already have basic metrics from the previous step
+                print("Using metrics from previous step...")
+                using_spark = False
+        
+            # Save linguistic results
+            linguistic_file = output_file.replace('.csv', '_linguistic.csv')
+            df.to_csv(linguistic_file, index=False)
+            print(f"Saved linguistic analysis to {linguistic_file}")
+        
+        # Ensemble scoring - this is simple enough to run without Spark if needed
+        print("Ensemble scoring...")
+        
+        if using_spark:
+            try:
+                df = ensemble_scoring_spark(spark, df)
+            except Exception as e:
+                print(f"Spark ensemble scoring failed: {e}")
+                using_spark = False
+                # Fall back to local ensemble scoring
+                print("Using local ensemble scoring implementation...")
+                df = ensemble_scoring_modified(df)
+        else:
+            # Use local ensemble scoring
+            print("Using local ensemble scoring implementation...")
+            df = ensemble_scoring_modified(df)
+        
+        # Save final results
+        print(f"Saving final results to {output_file}")
+        df.to_csv(output_file, index=False)
+        
+        # Visualization (optional)
+        try:
+            print("Generating visualizations...")
+            
+            # Create a visualizations directory if it doesn't exist
+            viz_dir = os.path.join(os.path.dirname(output_file), "visualizations")
+            os.makedirs(viz_dir, exist_ok=True)
+            
+            # Use the functions defined in this module
+            visualize_results(df, viz_dir)
+            
+            # Only try grammar-specific visualizations if we have those metrics
+            if any(col in df.columns for col in ['morph_similarity', 'grammar_mismatch', 'meteor_difference']):
+                visualize_grammatical_metrics(df, viz_dir)
+                
+            print(f"Visualizations saved to {viz_dir}")
+        except Exception as e:
+            print(f"Visualization error: {e}")
+            print("Skipping visualization step. Error details:")
+            import traceback
+            traceback.print_exc()
+        
+        elapsed_time = time.time() - start_time
+        print(f"Pipeline completed in {elapsed_time:.2f} seconds")
+        
+        return df
+        
+    except Exception as e:
+        # Catch any unhandled exceptions
+        elapsed_time = time.time() - start_time
+        print(f"Pipeline failed after {elapsed_time:.2f} seconds")
+        print(f"Critical error: {e}")
+        
+        # Print exception traceback for debugging
+        import traceback
+        traceback.print_exc()
+        
+        return None
+        
+    finally:
+        # Always shut down Spark
+        if spark:
+            shutdown_spark(spark)
+
+
+if __name__ == "__main__":
+    # Define base directory - Update this to your actual location
+    base_dir = "/content/drive/MyDrive/Colab Notebooks/preprocessed_datasets"
+    
+    # Dataset name - change this to switch between datasets
+    dataset = "predprocesiranje_msr_paired"
+    #dataset = "paws_nepodvojene_filtrirane_parafraze"
+    
+    # Construct paths using f-strings
+    input_file = f"{base_dir}/{dataset}.xlsx"
+    output_file = f"{base_dir}/paraphrase_analysis_results_{dataset.split('_')[0]}.csv"
+    
+    # Column names
+    text_col1 = "sentence_translation"
+    text_col2 = "paraphrase_translation"
+    
+    # Spark configuration
+    # Options for spark_master:
+    # - 'local[*]': Use all available cores on local machine
+    # - 'local[4]': Use 4 cores on local machine (more stable)
+    # - None: Use the default Spark configuration
+    # - 'spark://host:port': Connect to a Spark cluster
+    spark_config = {
+        'master': 'local[4]',  # Using 4 cores is more stable than all cores
+        'use_fallback_early': False  # Set to True to skip Spark and use fallback methods directly
+    }
+    
+    # Processing flags
+    add_metadata = True  # Set to True to add metadata
+    filter_dataset = True  # Set to True to filter out noisy pairs
+    
+    # Run the main pipeline with cleaned data
+    results = run_paraphrase_pipeline_spark(
+        cleaned_file,  # Use the cleaned CSV file we just created
+        clean_col1,    # Use the cleaned columns 
+        clean_col2,
+        output_file,
+        spark_master=spark_config['master']
+    )
+
+    print("Pipeline execution complete.")
+    
+    # Add metadata and filter dataset if requested
+    if results is not None and (add_metadata or filter_dataset):
+        try:
+            # Import the filtering module
+            try:
+                from filtering_metadata import add_metadata_and_filter, export_with_metadata
+                filtering_module_found = True
+            except ImportError:
+                print("Filtering module not found. Using local implementation.")
+                filtering_module_found = False
+            
+            if not filtering_module_found:
+                # Local implementation of filtering and metadata functions
+                def add_metadata_and_filter(df, text_col1, text_col2, min_similarity_threshold=0.1):
+                    import Levenshtein
+                    import re
+                    
+                    print(f"\nAdding metadata and filtering dataset with {len(df)} pairs...")
+                    results = df.copy()
+                    
+                    # Extract the normalized text columns
+                    norm_col1 = f"norm_{text_col1}" if f"norm_{text_col1}" in df.columns else text_col1
+                    norm_col2 = f"norm_{text_col2}" if f"norm_{text_col2}" in df.columns else text_col2
+                    
+                    # Add length metadata
+                    results['length_s1'] = results[norm_col1].apply(lambda x: len(str(x).split()))
+                    results['length_s2'] = results[norm_col2].apply(lambda x: len(str(x).split()))
+                    
+                    # Compute string similarity if not present
+                    if 'string_similarity' not in results.columns:
+                        results['string_similarity'] = [
+                            1 - (Levenshtein.distance(str(s1), str(s2)) / max(len(str(s1)), len(str(s2)), 1))
+                            for s1, s2 in zip(results[norm_col1], results[norm_col2])
+                        ]
+                    
+                    # Detect identical sentences
+                    results['is_identical'] = (results['string_similarity'] > 0.99) | (results[norm_col1] == results[norm_col2])
+                    identical_count = results['is_identical'].sum()
+                    print(f"Found {identical_count} identical pairs ({identical_count/len(results)*100:.2f}%)")
+                    
+                    # Filter out identical sentences
+                    if filter_dataset:
+                        before_count = len(results)
+                        results_filtered = results[~results['is_identical']]
+                        identical_removed = before_count - len(results_filtered)
+                        print(f"Removed {identical_removed} identical sentence pairs")
+                    else:
+                        results_filtered = results
+                    
+                    return {
+                        'full_data': results,
+                        'filtered_data': results_filtered
+                    }
+                
+                def export_with_metadata(result_dict, output_prefix):
+                    # Export full dataset with metadata
+                    full_output = f"{output_prefix}_with_metadata.csv"
+                    result_dict['full_data'].to_csv(full_output, index=False)
+                    print(f"Full dataset with metadata saved to {full_output}")
+                    
+                    # Export filtered dataset
+                    filtered_output = f"{output_prefix}_filtered.csv"
+                    result_dict['filtered_data'].to_csv(filtered_output, index=False)
+                    print(f"Filtered dataset saved to {filtered_output}")
+            
+            # Apply metadata and filtering
+            print("\nEnhancing dataset with metadata and filtering...")
+            result_dict = add_metadata_and_filter(
+                results, 
+                text_col1=text_col1, 
+                text_col2=text_col2,
+                min_similarity_threshold=0.1
+            )
+            
+            # Export the results
+            metadata_prefix = output_file.replace('.csv', '')
+            export_with_metadata(result_dict, metadata_prefix)
+            
+            # Use the filtered dataset for analysis
+            results_for_analysis = result_dict['filtered_data'] if filter_dataset else result_dict['full_data']
+            
+        except Exception as e:
+            print(f"Warning: Could not add metadata or filter dataset: {e}")
+            import traceback
+            traceback.print_exc()
+            # Continue with original results
+            results_for_analysis = results
+    else:
+        results_for_analysis = results
+    
+    # Analyze the results
+    if results_for_analysis is not None:
+        try:
+            # Import the analysis function
+            try:
+                from analysis_utils import analyze_paraphrase_results
+                analysis_module_found = True
+            except ImportError:
+                print("Analysis module not found. Using local implementation.")
+                analysis_module_found = False
+                
+            print("\nAnalyzing results...")
+            analysis_dir = os.path.join(os.path.dirname(output_file), "analysis")
+            os.makedirs(analysis_dir, exist_ok=True)
+            
+            if analysis_module_found:
+                stats = analyze_paraphrase_results(results_for_analysis, analysis_dir)
+            else:
+                # Use the visualization functions we already have
+                visualize_results(results_for_analysis, analysis_dir)
+                stats = {}  # Empty stats as fallback
+                
+            print("Analysis complete.")
+            
+            # Save statistics as JSON for later reference
+            import json
+            try:
+                # Convert stats to JSON-serializable format (handle numpy types)
+                def convert_for_json(obj):
+                    if isinstance(obj, (np.int64, np.int32, np.int16, np.int8)):
+                        return int(obj)
+                    elif isinstance(obj, (np.float64, np.float32, np.float16)):
+                        return float(obj)
+                    raise TypeError(f"Type {type(obj)} not serializable")
+                
+                stats_file = os.path.join(analysis_dir, "statistics.json")
+                with open(stats_file, 'w') as f:
+                    json.dump(stats, f, indent=2, default=convert_for_json)
+                print(f"Statistics saved to {stats_file}")
+            except Exception as e:
+                print(f"Warning: Could not save statistics as JSON: {e}")
+            
+            # Compare with previous results if available
+            original_results_file = os.path.join(base_dir, "original_paraphrase_results.csv")
+            if os.path.exists(original_results_file):
+                try:
+                    from analysis_utils import compare_pipeline_results
+                    
+                    print("\nComparing with original implementation results...")
+                    original_df = pd.read_csv(original_results_file)
+                    
+                    comparison_dir = os.path.join(os.path.dirname(output_file), "comparison")
+                    os.makedirs(comparison_dir, exist_ok=True)
+                    
+                    comparison = compare_pipeline_results(original_df, results_for_analysis, comparison_dir)
+                    print("Comparison complete.")
+                except Exception as e:
+                    print(f"Warning: Could not compare with original results: {e}")
+                    import traceback
+                    traceback.print_exc()
+        except Exception as e:
+            print(f"Warning: Could not analyze results: {e}")
+            import traceback
+            traceback.print_exc()
+
+
+"""
+Filtering and metadata enhancement for the paraphrase analysis pipeline.
+This module provides functions to filter out noisy pairs and add useful metadata.
+"""
+
+import pandas as pd
+import numpy as np
+from tqdm.auto import tqdm
+import Levenshtein
+import re
+
+
+def add_metadata_and_filter(df, text_col1, text_col2, min_similarity_threshold=0.1):
+    """
+    Add useful metadata to the paraphrase dataset and filter out noisy pairs.
+    
+    Args:
+        df: DataFrame containing paraphrase analysis results
+        text_col1, text_col2: Names of the text columns to analyze
+        min_similarity_threshold: Minimum similarity threshold for keeping pairs
+        
+    Returns:
+        DataFrame with added metadata and filtered pairs
+    """
+    print(f"\nAdding metadata and filtering dataset with {len(df)} pairs...")
+    results = df.copy()
+    
+    # Extract the normalized text columns
+    norm_col1 = f"norm_{text_col1}" if f"norm_{text_col1}" in df.columns else text_col1
+    norm_col2 = f"norm_{text_col2}" if f"norm_{text_col2}" in df.columns else text_col2
+    
+    # 1. Add basic length metadata
+    print("Adding length metadata...")
+    results['length_s1'] = results[norm_col1].apply(lambda x: len(str(x).split()))
+    results['length_s2'] = results[norm_col2].apply(lambda x: len(str(x).split()))
+    results['length_ratio'] = results.apply(
+        lambda x: min(x['length_s1'], x['length_s2']) / max(x['length_s1'], x['length_s2']) 
+        if max(x['length_s1'], x['length_s2']) > 0 else 1.0, 
+        axis=1
+    )
+    results['char_length_s1'] = results[norm_col1].apply(lambda x: len(str(x)))
+    results['char_length_s2'] = results[norm_col2].apply(lambda x: len(str(x)))
+    
+    # 2. Add string similarity metadata if not already present
+    if 'string_similarity' not in results.columns:
+        print("Computing string similarity...")
+        results['string_similarity'] = [
+            1 - (Levenshtein.distance(str(s1), str(s2)) / max(len(str(s1)), len(str(s2)), 1))
+            for s1, s2 in tqdm(zip(results[norm_col1], results[norm_col2]), total=len(results))
+        ]
+    
+    # 3. Detect identical sentences
+    print("Identifying identical sentences...")
+    results['is_identical'] = (results['string_similarity'] > 0.99) | (results[norm_col1] == results[norm_col2])
+    identical_count = results['is_identical'].sum()
+    print(f"Found {identical_count} identical pairs ({identical_count/len(results)*100:.2f}%)")
+    
+    # 4. Add confidence score for classification
+    print("Computing classification confidence...")
+    if 'ensemble_score' in results.columns:
+        # How far from the decision threshold (0.75)
+        results['classification_confidence'] = results['ensemble_score'].apply(
+            lambda x: abs(x - 0.75) / 0.25  # Normalize to [0,1] range
+        ).clip(0, 1)  # Clip to ensure range [0,1]
+    
+    # 5. Add linguistic complexity metadata
+    print("Adding linguistic complexity metadata...")
+    # Simple readability approximation (average word length)
+    results['avg_word_length_s1'] = results[norm_col1].apply(
+        lambda x: np.mean([len(w) for w in str(x).split()]) if len(str(x).split()) > 0 else 0
+    )
+    results['avg_word_length_s2'] = results[norm_col2].apply(
+        lambda x: np.mean([len(w) for w in str(x).split()]) if len(str(x).split()) > 0 else 0
+    )
+    
+    # 6. Check for malformed content
+    print("Checking for malformed content...")
+    html_pattern = re.compile(r'<[^>]+>')
+    results['has_html_s1'] = results[text_col1].apply(
+        lambda x: bool(html_pattern.search(str(x)))
+    )
+    results['has_html_s2'] = results[text_col2].apply(
+        lambda x: bool(html_pattern.search(str(x)))
+    )
+    
+    # Add potential encoding issues flag
+    def has_encoding_issues(text):
+        # Check for common encoding issue patterns
+        strange_chars = sum(1 for c in str(text) if ord(c) > 127 and c not in 'čšžćđČŠŽĆĐ')
+        return strange_chars > len(str(text)) * 0.1  # More than 10% strange characters
+    
+    results['encoding_issues_s1'] = results[text_col1].apply(has_encoding_issues)
+    results['encoding_issues_s2'] = results[text_col2].apply(has_encoding_issues)
+    
+    # 7. Create a quality score combining multiple factors
+    print("Computing overall quality score...")
+    
+    # Initialize quality with classification confidence if available
+    if 'classification_confidence' in results.columns:
+        results['quality_score'] = results['classification_confidence']
+    else:
+        # Start with middle value
+        results['quality_score'] = 0.5
+    
+    # Penalize for issues
+    if 'has_html_s1' in results.columns:
+        results.loc[results['has_html_s1'] | results['has_html_s2'], 'quality_score'] *= 0.7
+    
+    if 'encoding_issues_s1' in results.columns:
+        results.loc[results['encoding_issues_s1'] | results['encoding_issues_s2'], 'quality_score'] *= 0.7
+    
+    # Extremely low similarity is suspicious
+    min_similarity = results[['labse_similarity', 'laser_similarity', 'string_similarity']].min(axis=1)
+    results.loc[min_similarity < min_similarity_threshold, 'quality_score'] *= 0.5
+    
+    # 8. Filter out noisy pairs
+    print("\nFiltering dataset...")
+    # Filter out identical sentences
+    before_count = len(results)
+    results_filtered = results[~results['is_identical']]
+    identical_removed = before_count - len(results_filtered)
+    print(f"Removed {identical_removed} identical sentence pairs")
+    
+    # Filter out malformed content
+    before_count = len(results_filtered)
+    results_filtered = results_filtered[
+        ~(results_filtered['has_html_s1'] | results_filtered['has_html_s2'] | 
+          results_filtered['encoding_issues_s1'] | results_filtered['encoding_issues_s2'])
+    ]
+    malformed_removed = before_count - len(results_filtered)
+    print(f"Removed {malformed_removed} pairs with malformed content")
+    
+    # Filter out pairs with extremely low similarity (likely errors)
+    before_count = len(results_filtered)
+    results_filtered = results_filtered[
+        results_filtered[['labse_similarity', 'laser_similarity']].min(axis=1) >= min_similarity_threshold
+    ]
+    low_similarity_removed = before_count - len(results_filtered)
+    print(f"Removed {low_similarity_removed} pairs with extremely low similarity")
+    
+    # 9. Final stats
+    filtered_total = identical_removed + malformed_removed + low_similarity_removed
+    filtered_percentage = (filtered_total / len(df)) * 100
+    
+    print(f"\nFiltering complete:")
+    print(f"Started with {len(df)} pairs")
+    print(f"Filtered out {filtered_total} pairs ({filtered_percentage:.2f}%)")
+    print(f"Final dataset has {len(results_filtered)} pairs")
+    
+    # Return both the full dataset with metadata and the filtered dataset
+    return {
+        'full_data': results,
+        'filtered_data': results_filtered
+    }
+
+
+def export_with_metadata(result_dict, output_prefix):
+    """
+    Export both the full and filtered datasets with metadata.
+    
+    Args:
+        result_dict: Dictionary with 'full_data' and 'filtered_data' keys
+        output_prefix: Prefix for output filenames
+    """
+    # Export full dataset with metadata
+    full_output = f"{output_prefix}_with_metadata.csv"
+    result_dict['full_data'].to_csv(full_output, index=False)
+    print(f"Full dataset with metadata saved to {full_output}")
+    
+    # Export filtered dataset
+    filtered_output = f"{output_prefix}_filtered.csv"
+    result_dict['filtered_data'].to_csv(filtered_output, index=False)
+    print(f"Filtered dataset saved to {filtered_output}")
+    
+    # Export metadata summary
+    summary_df = pd.DataFrame({
+        'Metric': ['Total pairs', 'Filtered pairs', 'Remaining pairs', 
+                  'Identical pairs', 'Pairs with HTML', 'Pairs with encoding issues',
+                  'Pairs with very low similarity'],
+        'Count': [
+            len(result_dict['full_data']),
+            len(result_dict['full_data']) - len(result_dict['filtered_data']),
+            len(result_dict['filtered_data']),
+            result_dict['full_data']['is_identical'].sum(),
+            (result_dict['full_data']['has_html_s1'] | result_dict['full_data']['has_html_s2']).sum(),
+            (result_dict['full_data']['encoding_issues_s1'] | result_dict['full_data']['encoding_issues_s2']).sum(),
+            (result_dict['full_data'][['labse_similarity', 'laser_similarity']].min(axis=1) < 0.1).sum()
+        ],
+        'Percentage': [
+            100.0,
+            (len(result_dict['full_data']) - len(result_dict['filtered_data'])) / len(result_dict['full_data']) * 100,
+            len(result_dict['filtered_data']) / len(result_dict['full_data']) * 100,
+            result_dict['full_data']['is_identical'].sum() / len(result_dict['full_data']) * 100,
+            (result_dict['full_data']['has_html_s1'] | result_dict['full_data']['has_html_s2']).sum() / len(result_dict['full_data']) * 100,
+            (result_dict['full_data']['encoding_issues_s1'] | result_dict['full_data']['encoding_issues_s2']).sum() / len(result_dict['full_data']) * 100,
+            (result_dict['full_data'][['labse_similarity', 'laser_similarity']].min(axis=1) < 0.1).sum() / len(result_dict['full_data']) * 100
+        ]
+    })
+    
+    summary_output = f"{output_prefix}_filtering_summary.csv"
+    summary_df.to_csv(summary_output, index=False)
+    print(f"Filtering summary saved to {summary_output}")
+
+
+# Sample usage
+if __name__ == "__main__":
+    # Path to your paraphrase analysis results
+    input_file = "paraphrase_analysis_results.csv"
+    
+    # Load the data
+    df = pd.read_csv(input_file)
+    
+    # Add metadata and filter
+    result_dict = add_metadata_and_filter(
+        df, 
+        text_col1="sentence_translation", 
+        text_col2="paraphrase_translation",
+        min_similarity_threshold=0.1
+    )
+    
+    # Export the results
+    export_with_metadata(result_dict, "paraphrase_dataset")
