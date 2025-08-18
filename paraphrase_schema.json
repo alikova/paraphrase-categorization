@@ -122,11 +122,11 @@
             "objekt"
           ],
           "examples": [
-            "Marija piše pismo → Pismo piše Marija",
-            "Oče popravlja avto → Avto popravlja oče",
-            "Učitelj razlaga snov → Snov razlaga učitelj",
-            "Delavci gradijo hišo → Hišo gradijo delavci",
-            "Mačka lovi miš → Miš lovi mačka"
+            "Marija piše pismo → Pismo se piše",
+            "Oče je popravil avto → Avto je bil popravljen",
+            "Učitelj razlaga snov → Snov je razlagana od učitelja",
+            "Delavci gradijo hišo → Hiša je v gradnji",
+            "Janez bere knjigo → Knjiga je brana s strani Janeza"
           ]
         },
         "nominalizacija": {
