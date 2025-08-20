@@ -1,0 +1,47 @@
+Ontološka shema s štirimi oziroma dvanajstimi kategorijami parafraziranja je bila povzeta iz Jupyter Notebook beležke in uporabljena v postopku učenja velikih jezikovnih modelov.
+
+------------------------------------------------------------------------------------
+ONTOLOŠKA SHEMA PARAFRAZIRANJA:
+
+1. semantično_parafraziranje: Spremembe POMENA
+   - Sinonimi, antonimi, hierarhične povezave
+   - Primer: "avto" → "vozilo" (hipernim)
+
+2. sintaktično_parafraziranje: Spremembe STRUKTURE
+   - Vrstni red besed, aktiv/pasiv, nominalizacija
+   - Primer: "John bere knjigo" → "Knjiga je brana s strani Johna"
+
+3. pragmatično_parafraziranje: Spremembe KONTEKSTA
+   - Modalnost, fokus, ton, register
+   - Primer: "Moram iti" → "Potrebno je, da grem"
+
+4. leksikalno_parafraziranje: Spremembe BESEDIŠČA
+   - Čas, aspekt, tip stavka, dolžina
+   - Primer: "Tekel je" → "Začel je teči"
+
+------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------
+
+DETAJLNA ONTOLOŠKA SHEMA:
+
+SEMANTIČNO (pomen):
+- zamenjava_sopomenk: sinonimi
+- antonim_z_negacijo: nasprotni pomen z negacijo
+- hipernim_hiponim: splošnejši/specifičnejši izrazi
+
+SINTAKTIČNO (struktura):
+- sprememba_vrstnega_reda: drugačen vrstni red besed
+- aktivno_pasivna_sprememba: aktiv ↔ pasiv
+- nominalizacija: pretvorba v samostalnik
+
+PRAGMATIČNO (kontekst):
+- sprememba_modalnosti: "lahko/mora/bi"
+- sprememba_fokusa: poudarek drugega dela
+- prilagajanje_tona: formalno/neformalno
+
+LEKSIKALNO (besedišče):
+- časovno_aspektualne_spremembe: čas/aspekt glagolov
+- jedrnatost_razširjanje_konteksta: krajše/daljše
+- pretvorba_stavčnih_vrst: tip stavka
+
+------------------------------------------------------------------------------------
