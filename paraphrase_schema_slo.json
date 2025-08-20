@@ -1,0 +1,223 @@
+{
+  "schema_version": "1.0",
+  "description": "Hierarhična shema za kategorizacijo slovenskih parafraz",
+  "main_categories": {
+    "leksikalno_parafraziranje": {
+      "name": "Leksikalno parafraziranje",
+      "description": "Leksikalno parafraziranje vključuje spremembe na ravni besed in njihovega pomena",
+      "keywords": [
+        "besede",
+        "pomen",
+        "sopomenke",
+        "antonimi",
+        "besedišče",
+        "leksika",
+        "sinonimi"
+      ],
+      "subcategories": {
+        "zamenjava_sopomenk": {
+          "name": "Zamenjava sopomenk",
+          "description": "Zamenjava besed s sopomenkami ob ohranitvi istega pomena stavka",
+          "keywords": [
+            "sopomenke",
+            "sinonimi",
+            "zamenjava besed",
+            "podoben pomen",
+            "enakovreden izraz",
+            "ista vsebina"
+          ]
+        },
+        "antonim_z_negacijo": {
+          "name": "Antonim z negacijo",
+          "description": "Uporaba antonimov v kombinaciji z negacijo za izražanje istega pomena",
+          "keywords": [
+            "antonimi",
+            "nasprotje",
+            "negacija",
+            "ni",
+            "ne",
+            "protipomen",
+            "zanikanje"
+          ]
+        },
+        "hipernim_hiponim": {
+          "name": "Uporaba hiponima ali hipernima",
+          "description": "Zamenjava z bolj splošnimi (hipernimi) ali bolj specifičnimi (hiponimi) izrazi",
+          "keywords": [
+            "hierarhija",
+            "splošno",
+            "specifično",
+            "nadpomen",
+            "podpomen",
+            "kategorija",
+            "vrsta"
+          ]
+        }
+      }
+    },
+    "sintakticno_parafraziranje": {
+      "name": "Sintaktično parafraziranje",
+      "description": "Sintaktično parafraziranje vključuje spremembe v strukturi stavka",
+      "keywords": [
+        "struktura",
+        "vrstni red",
+        "sintaksa",
+        "stavek",
+        "oblika",
+        "konstrukcija",
+        "slovnica"
+      ],
+      "subcategories": {
+        "sprememba_vrstnega_reda": {
+          "name": "Sprememba besednega vrstnega reda",
+          "description": "Sprememba vrstnega reda besed v stavku ob ohranitvi pomena",
+          "keywords": [
+            "vrstni red",
+            "besedni red",
+            "preureditev",
+            "pozicija besed",
+            "struktura stavka",
+            "permutacija"
+          ]
+        },
+        "aktivno_pasivna_sprememba": {
+          "name": "Aktivno ↔ pasivno",
+          "description": "Pretvorba med aktivno in pasivno obliko stavka",
+          "keywords": [
+            "aktiv",
+            "pasiv",
+            "trpnik",
+            "dejavnik",
+            "povzročitelj",
+            "prejemnik",
+            "subjekt",
+            "objekt"
+          ]
+        },
+        "nominalizacija": {
+          "name": "Nominalizacija",
+          "description": "Pretvorba glagolov v samostalnike ali samostalniške zveze",
+          "keywords": [
+            "samostalnik",
+            "glagol",
+            "pretvorba",
+            "nominalizacija",
+            "proces",
+            "dejanje",
+            "substantivizacija"
+          ]
+        }
+      }
+    },
+    "semanticno_parafraziranje": {
+      "name": "Semantično parafraziranje",
+      "description": "Semantično parafraziranje vključuje spremembe na ravni pomena in interpretacije",
+      "keywords": [
+        "pomen",
+        "smisel",
+        "interpretacija",
+        "kontekst",
+        "semantika",
+        "razumevanje",
+        "vsebina"
+      ],
+      "subcategories": {
+        "sprememba_modalnosti": {
+          "name": "Sprememba modalnosti",
+          "description": "Spremembe v stopnji gotovosti, možnosti ali nujnosti",
+          "keywords": [
+            "gotovost",
+            "možnost",
+            "verjetnost",
+            "lahko",
+            "mora",
+            "bo",
+            "morda",
+            "zagotovo",
+            "mogoče"
+          ]
+        },
+        "sprememba_fokusa": {
+          "name": "Sprememba fokusa",
+          "description": "Premik poudarka na različne dele stavka",
+          "keywords": [
+            "poudarek",
+            "fokus",
+            "pomembnost",
+            "osredotočenost",
+            "izpostavljanje",
+            "naglasitev"
+          ]
+        },
+        "casovno_aspektualne_spremembe": {
+          "name": "Časovno-aspektualne spremembe",
+          "description": "Spremembe v časovnih ali aspektualnih značilnostih glagolov",
+          "keywords": [
+            "čas",
+            "aspekt",
+            "trajanje",
+            "dovršenost",
+            "nedovršenost",
+            "preteklik",
+            "sedanjik",
+            "prihodnjik"
+          ]
+        }
+      }
+    },
+    "pragmaticno_parafraziranje": {
+      "name": "Pragmatično parafraziranje",
+      "description": "Pragmatično parafraziranje vključuje kontekstualne in slogovne spremembe",
+      "keywords": [
+        "kontekst",
+        "stil",
+        "register",
+        "situacija",
+        "namen",
+        "učinek",
+        "pragmatika"
+      ],
+      "subcategories": {
+        "prilagajanje_tona": {
+          "name": "Prilagoditev tona",
+          "description": "Prilagajanje stopnje formalnosti ali čustvenega tona",
+          "keywords": [
+            "formalnost",
+            "ton",
+            "register",
+            "čustveni ton",
+            "vljudnost",
+            "neformalno",
+            "sleng"
+          ]
+        },
+        "jedrnatost_razsirjanje_konteksta": {
+          "name": "Jedrnatost ali razširjanje konteksta",
+          "description": "Skrajševanje ali razširjanje izrazov z dodajanjem podrobnosti",
+          "keywords": [
+            "jedrnatost",
+            "razširjanje",
+            "podrobnosti",
+            "kratko",
+            "obširno",
+            "elaboracija",
+            "kondenzacija"
+          ]
+        },
+        "pretvorba_stavcnih_vrst": {
+          "name": "Pretvorba stavčnih vrst",
+          "description": "Pretvarjanje med različnimi vrstami stavkov",
+          "keywords": [
+            "vprašanje",
+            "trditev",
+            "ukaz",
+            "klicalnik",
+            "interrogativ",
+            "deklarativ",
+            "imperativ"
+          ]
+        }
+      }
+    }
+  }
+}
