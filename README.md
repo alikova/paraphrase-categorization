@@ -126,17 +126,19 @@
 --------------------------------------------------
 
 1. Data Preprocessing
-jupyter# Open preprocessing_datasets_metrics_cleaned.ipynb
-# Notebook contains complete processing of English corpora into Slovenian training set
-2. Model Training
-jupyter# For zero-shot and few-shot learning:
-# training_and_learning_step_cleaned.ipynb
+  jupyter - Open preprocessing_datasets_metrics_cleaned.ipynb
+  Notebook contains complete processing of English corpora into Slovenian training set
 
-# For weight adaptation:
-# Finetuning_models.ipynb
+2. Model Training
+  jupyter - For zero-shot and few-shot learning:
+  training_and_learning_step_cleaned.ipynb
+
+For weight adaptation:
+  Finetuning_models.ipynb
+  
 3. Translation
-jupyter# For translating English paraphrases:
-# paraphrase_datasets_translations_GPT3_5.ipynb
+  jupyter - For translating English paraphrases:
+  paraphrase_datasets_translations_GPT3_5.ipynb
 
 --------------------------------------------------
 ## Key Findings
