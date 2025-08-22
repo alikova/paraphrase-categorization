@@ -189,13 +189,14 @@ bibtex@mastersthesis{zumer2025paraphrasing,
 }
 
 
-Contributions are welcome! If you find issues, have suggestions for improvements, or want to extend the research, feel free to open an issue or submit a pull request. This includes:
+Contributions are welcome! If you find issues, have suggestions for improvements, or want to extend the research, feel free to open an issue or submit a pull request. 
+This includes:
 
-Bug fixes in the code
-Improvements to the documentation
-Extensions to the ontological schema
-Additional experiments or analyses
-Translation improvements
+  Bug fixes in the code
+  Improvements to the documentation
+  Extensions to the ontological schema
+  Additional experiments or analyses
+  Translation improvements
 
 
 Contact
