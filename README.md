@@ -133,8 +133,8 @@
   jupyter - For zero-shot and few-shot learning:
   training_and_learning_step_cleaned.ipynb
 
-For weight adaptation:
-  Finetuning_models.ipynb
+  For weight adaptation:
+    Finetuning_models.ipynb
   
 3. Translation
   jupyter - For translating English paraphrases:
@@ -176,6 +176,7 @@ Processing: Classla for Slovenian language processing
 Evaluation: Multi-dimensional metrics (LaBSE, METEOR, Word Jaccard)
 
 --------------------------------------------------
+
 Citation
 bibtex@mastersthesis{zumer2025paraphrasing,
   title={Strojna kategorizacija parafraz z velikimi jezikovnimi modeli},
@@ -186,7 +187,7 @@ bibtex@mastersthesis{zumer2025paraphrasing,
   address={Ljubljana, Slovenia},
   supervisor={Robnik-Šikonja, Marko}
 }
---------------------------------------------------
+
 
 Contributions are welcome! If you find issues, have suggestions for improvements, or want to extend the research, feel free to open an issue or submit a pull request. This includes:
 
