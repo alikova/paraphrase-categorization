@@ -202,9 +202,9 @@ This includes:
 
 Contact
 
-Author: Alenka Žumer
-Supervisor: Prof. Dr. Marko Robnik-Šikonja
-Institution: University of Ljubljana, Cognitive Science Programme
+Author: Alenka Žumer  
+Supervisor: Prof. Dr. Marko Robnik-Šikonja  
+Institution: University of Ljubljana, Cognitive Science Programme  
 
 
 Keywords: paraphrasing, natural language processing, large language models, ontologies, categorization, Slovenian language, transformer architecture, LoRA fine-tuning
