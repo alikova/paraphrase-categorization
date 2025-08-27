@@ -133,8 +133,8 @@
   jupyter - For zero-shot and few-shot learning:
   training_and_learning_step_cleaned.ipynb
 
-  For weight adaptation:
-    Finetuning_models.ipynb
+    For weight adaptation:  
+      Finetuning_models.ipynb  
   
 3. Translation
   jupyter - For translating English paraphrases:
@@ -154,26 +154,26 @@ Dataset Size Optimization
 
 Model Specialization
 
-  GaMS: Superior results in syntactic and pragmatic paraphrasing
-  LLaMA: Better at lexical and semantic paraphrasing
-  GaMS top subcategories: Word order changes (95.5%), synonym substitution (89.7%)
-  LLaMA top subcategories: Hypernym/hyponym (90.8%), nominalization (89.7%)
+  GaMS: Superior results in syntactic and pragmatic paraphrasing  
+  LLaMA: Better at lexical and semantic paraphrasing  
+  GaMS top subcategories: Word order changes (95.5%), synonym substitution (89.7%)  
+  LLaMA top subcategories: Hypernym/hyponym (90.8%), nominalization (89.7%)  
 
-Translation Service Comparison
-Translation evaluation results are in Translation Comparison - google translate, gpt, deepl, GaMS.xlsx:
+Translation Service Comparison  
+Translation evaluation results are in Translation Comparison - google translate, gpt, deepl, GaMS.xlsx:  
 
-  ChatGPT: Best overall quality
-  DeepL: Good alternative with some errors
-  GaMS: More creative translations but with grammatical errors
+  ChatGPT: Best overall quality  
+  DeepL: Good alternative with some errors  
+  GaMS: More creative translations but with grammatical errors  
 
 
 Technical Stack
 
-Models: GaMS-1B (Slovenian-specialized), LLaMA-3.1-8B (multilingual)
-Fine-tuning: LoRA (Low-Rank Adaptation) for parameter efficiency
-Translation: Comparative evaluation of ChatGPT, DeepL, GaMS
-Processing: Classla for Slovenian language processing
-Evaluation: Multi-dimensional metrics (LaBSE, METEOR, Word Jaccard)
+Models: GaMS-1B (Slovenian-specialized), LLaMA-3.1-8B (multilingual)  
+Fine-tuning: LoRA (Low-Rank Adaptation) for parameter efficiency  
+Translation: Comparative evaluation of ChatGPT, DeepL, GaMS  
+Processing: Classla for Slovenian language processing  
+Evaluation: Multi-dimensional metrics (LaBSE, METEOR, Word Jaccard)  
 
 --------------------------------------------------
 
